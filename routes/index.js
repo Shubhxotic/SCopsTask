@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
-var jwt = require("jsonwebtoken")
-
+var jwt = require("jsonwebtoken");
+var jsonpatch = require("jsonpatch");
 
 /* GET home page. */
 router.get('/', verifyToken,   function(req, res, next) {
@@ -13,6 +13,34 @@ router.get('/', verifyToken,   function(req, res, next) {
       console.log("Error = ",err);
       res.sendStatus(403);
     } else {
+      res.render('index', { title: 'Express' , authData: authData});
+    }
+  });
+
+});
+
+
+
+router.post('/jsonPatch', verifyToken,   function(req, res, next) {
+  
+  console.log("Cookie", req.cookies.AuthToken);
+
+  jwt.verify(req.cookies.AuthToken.token, 'secretkey', (err, authData) => {
+    if(err) {
+      console.log("Error = ",err);
+      res.sendStatus(403);
+    } else {
+      let jsonObj = req.body.jsonObj;
+      let jsonPatch = req.body.Patch;
+      
+      console.log(req.body);
+      
+      console.log(jsonObj,jsonPatch);
+
+      patcheddoc = jsonpatch.apply_patch(jsonObj, jsonPatch);
+
+      console.log(patcheddoc);
+
       res.render('index', { title: 'Express' , authData: authData});
     }
   });
@@ -32,7 +60,7 @@ router.post("/login", (req,res) => {
     username: req.body.username,
   }
 
-  jwt.sign({user}, "secretkey", { expiresIn: '30s' }, (err,token) => {
+  jwt.sign({user}, "secretkey", { expiresIn: '1030s' }, (err,token) => {
     
     MyCookie = {
       token
