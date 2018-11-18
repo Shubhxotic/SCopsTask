@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var jwt = require("jsonwebtoken");
 var jsonpatch = require("jsonpatch");
+const imageThumbnail = require('image-thumbnail');
+var fs=require('fs');
 
 /* GET home page. */
 router.get('/', verifyToken,   function(req, res, next) {
@@ -34,7 +36,7 @@ router.post('/jsonPatch', verifyToken,   function(req, res, next) {
       let jsonPatch = req.body.Patch;
       
       console.log(req.body);
-      
+
       console.log(jsonObj,jsonPatch);
 
       patcheddoc = jsonpatch.apply_patch(jsonObj, jsonPatch);
@@ -102,6 +104,49 @@ function verifyToken(req, res, next) {
   else {
       // Forbidden
       res.sendStatus(403);
+  }
+}
+
+
+
+router.post('/thumbnail', verifyToken,   function(req, res, next) {
+  
+  console.log("Cookie", req.cookies.AuthToken);
+
+  jwt.verify(req.cookies.AuthToken.token, 'secretkey', (err, authData) => {
+    if(err) {
+      console.log("Error = ",err);
+      res.sendStatus(403);
+    } else {
+      console.log("Yo");
+      funcimageThumbnail();
+      res.render('index', { title: 'Express' , authData: authData});
+    }
+  });
+
+});
+
+
+async function funcimageThumbnail() {
+  try {
+    const thumbnail = await imageThumbnail({ uri: 'https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fbeebom-redkapmedia.netdna-ssl.com%2Fwp-content%2Fuploads%2F2016%2F01%2FReverse-Image-Search-Engines-Apps-And-Its-Uses-2016.jpg&f=1'},{ width: 50, height: 50 });
+    console.log("Thumbnail = ",thumbnail," type = "+typeof(thumbnail));
+
+    fs.open("public/images/image.png", 'w', function(err, fd) {  
+      if (err) {
+          throw 'could not open file: ' + err;
+      }
+
+      // write the contents of the buffer, from position 0 to the end, to the file descriptor returned in opening our file
+      fs.write(fd, thumbnail, 0, thumbnail.length, null, function(err) {
+          if (err) throw 'error writing file: ' + err;
+          fs.close(fd, function() {
+              console.log('wrote the file successfully');
+          });
+      });
+  });
+  } catch (err) {
+    console.error(err);
   }
 }
 
