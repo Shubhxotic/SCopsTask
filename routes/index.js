@@ -8,9 +8,7 @@ var fs=require('fs');
 /* GET home page. */
 router.get('/', verifyToken,   function(req, res, next) {
   
-  console.log("Cookie", req.cookies.AuthToken);
-
-  jwt.verify(req.cookies.AuthToken.token, 'secretkey', (err, authData) => {
+  jwt.verify(req.get("Authorization"), 'secretkey', (err, authData) => {
     if(err) {
       console.log("Error = ",err);
       res.sendStatus(403);
@@ -18,16 +16,11 @@ router.get('/', verifyToken,   function(req, res, next) {
       res.render('index', { title: 'Express' , authData: authData});
     }
   });
-
 });
-
-
 
 router.post('/jsonPatch', verifyToken,   function(req, res, next) {
   
-  console.log("Cookie", req.cookies.AuthToken);
-
-  jwt.verify(req.cookies.AuthToken.token, 'secretkey', (err, authData) => {
+  jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
     if(err) {
       console.log("Error = ",err);
       res.sendStatus(403);
@@ -43,7 +36,9 @@ router.post('/jsonPatch', verifyToken,   function(req, res, next) {
 
       console.log(patcheddoc);
 
-      res.render('index', { title: 'Express' , authData: authData});
+      res.json(patcheddoc);
+
+      // res.render('index', { title: 'Express' , authData: authData});
     }
   });
 
@@ -51,6 +46,7 @@ router.post('/jsonPatch', verifyToken,   function(req, res, next) {
 
 /* GET login page. */
 router.get('/login', function(req, res, next) {
+  logger("YOLIOYFKNdsf");
   res.render('login', { title: 'Express' });
 });
 
@@ -64,12 +60,9 @@ router.post("/login", (req,res) => {
 
   jwt.sign({user}, "secretkey", { expiresIn: '1030s' }, (err,token) => {
     
-    MyCookie = {
-      token
-    }
+    let val = "Bearer "+token;
+    res.set("Authorization", val);
 
-    res.cookie("AuthToken",MyCookie,{maxAge: 1000*2*60});
-    
     res.json({
       token
     });
@@ -81,9 +74,9 @@ router.post("/login", (req,res) => {
 function verifyToken(req, res, next) {
   // Get auth header value
   
-  if(req.cookies.AuthToken){
+  if(req.get("Authorization")){
       
-    const bearerHeader = req.cookies.AuthToken.token;
+    const bearerHeader = req.get("Authorization");
     console.log("Bearer =  ",bearerHeader);
     // Check if bearer is undefined
     if(typeof bearerHeader !== 'undefined') {
@@ -111,42 +104,57 @@ function verifyToken(req, res, next) {
 
 router.post('/thumbnail', verifyToken,   function(req, res, next) {
   
-  console.log("Cookie", req.cookies.AuthToken);
+  // console.log("Cookie", req.cookies.AuthToken);
 
-  jwt.verify(req.cookies.AuthToken.token, 'secretkey', (err, authData) => {
+  jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
     if(err) {
       console.log("Error = ",err);
       res.sendStatus(403);
     } else {
       console.log("Yo");
-      funcimageThumbnail();
-      res.render('index', { title: 'Express' , authData: authData});
+      funcimageThumbnail(req,res);
     }
   });
 
 });
 
 
-async function funcimageThumbnail() {
+async function funcimageThumbnail(req,res) {
   try {
-    const thumbnail = await imageThumbnail({ uri: 'https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fbeebom-redkapmedia.netdna-ssl.com%2Fwp-content%2Fuploads%2F2016%2F01%2FReverse-Image-Search-Engines-Apps-And-Its-Uses-2016.jpg&f=1'},{ width: 50, height: 50 });
-    console.log("Thumbnail = ",thumbnail," type = "+typeof(thumbnail));
+    if(req.body.uri == undefined){
+      res.json({
+        "error": "Please provide uri as the key in the request body."
+      })
+    }
+    else{
+        
+      const thumbnail = await imageThumbnail({ uri: 'https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fbeebom-redkapmedia.netdna-ssl.com%2Fwp-content%2Fuploads%2F2016%2F01%2FReverse-Image-Search-Engines-Apps-And-Its-Uses-2016.jpg&f=1'},{ width: 50, height: 50 });
+      console.log("Thumbnail = ",thumbnail," type = "+typeof(thumbnail));
 
-    fs.open("public/images/image.png", 'w', function(err, fd) {  
-      if (err) {
-          throw 'could not open file: ' + err;
-      }
+      //Saving thumbnail buffer to a file.
 
-      // write the contents of the buffer, from position 0 to the end, to the file descriptor returned in opening our file
-      fs.write(fd, thumbnail, 0, thumbnail.length, null, function(err) {
-          if (err) throw 'error writing file: ' + err;
-          fs.close(fd, function() {
-              console.log('wrote the file successfully');
-          });
+      // fs.open("public/images/image.png", 'w', function(err, fd) {  
+      //   if (err) {
+      //       throw 'could not open file: ' + err;
+      //   }
+
+      //   // write the contents of the buffer, from position 0 to the end, to the file descriptor returned in opening our file
+      //   fs.write(fd, thumbnail, 0, thumbnail.length, null, function(err) {
+      //       if (err) throw 'error writing file: ' + err;
+      //       fs.close(fd, function() {
+      //           console.log('wrote the file successfully');
+      //       });
+      //   });
+
+      res.json({
+        "thumbnail": thumbnail
       });
-  });
-  } catch (err) {
-    console.error(err);
+    }
+  }
+  catch (err) {
+    res.json({
+      "error": err
+    });
   }
 }
 
