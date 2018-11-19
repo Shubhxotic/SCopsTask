@@ -5,53 +5,6 @@ var jsonpatch = require("jsonpatch");
 const imageThumbnail = require('image-thumbnail');
 var fs=require('fs');
 
-/* GET home page. */
-router.get('/', verifyToken,   function(req, res, next) {
-  
-  jwt.verify(req.get("Authorization"), 'secretkey', (err, authData) => {
-    if(err) {
-      console.log("Error = ",err);
-      res.sendStatus(403);
-    } else {
-      res.render('index', { title: 'Express' , authData: authData});
-    }
-  });
-});
-
-router.post('/jsonPatch', verifyToken,   function(req, res, next) {
-  
-  jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
-    if(err) {
-      console.log("Error = ",err);
-      res.sendStatus(403);
-    } else {
-      let jsonObj = req.body.jsonObj;
-      let jsonPatch = req.body.Patch;
-      
-      console.log(req.body);
-
-      console.log(jsonObj,jsonPatch);
-
-      patcheddoc = jsonpatch.apply_patch(jsonObj, jsonPatch);
-
-      console.log(patcheddoc);
-
-      res.json(patcheddoc);
-
-      // res.render('index', { title: 'Express' , authData: authData});
-    }
-  });
-
-});
-
-/* GET login page. */
-router.get('/login', function(req, res, next) {
-  logger("YOLIOYFKNdsf");
-  res.render('login', { title: 'Express' });
-});
-
-
-
 
 router.post("/login", (req,res) => {
   var user = {
@@ -66,8 +19,97 @@ router.post("/login", (req,res) => {
     res.json({
       token
     });
+
+    res.end();
   })
 })   
+
+
+router.post('/jsonPatch', verifyToken,  (req, res, next) => {  
+  if(req.get("Authorization") == undefined){
+    res.statusCode(403);
+    res.end();
+  }
+  else{
+  
+    jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
+      if(err) {
+        res.sendStatus(403);
+        res.end();
+      } else {
+        let jsonObj = req.body.jsonObj;
+        let jsonPatch = req.body.Patch;
+
+        patcheddoc = jsonpatch.apply_patch(jsonObj, jsonPatch);
+
+        res.json(patcheddoc);
+        res.end();
+      }
+    });
+  }
+});
+
+
+router.post('/thumbnail', verifyToken,  (req, res, next) => {
+  
+  if(req.get("Authorization") == undefined){
+    res.statusCode(403);
+    res.end();
+  }
+  else{
+    jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
+      if(err) {
+        console.log("Error = ",err);
+        res.sendStatus(403);
+        res.end();
+      } else {
+        funcimageThumbnail(req,res);
+      }
+    });
+  }
+});
+
+
+async function funcimageThumbnail(req,res) {
+  try {
+    if(req.body.uri == undefined){
+      res.json({
+        "error": "Please provide uri as the key in the request body."
+      });
+      res.end();
+    }
+    else{
+        
+      const thumbnail = await imageThumbnail({ uri: 'https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fbeebom-redkapmedia.netdna-ssl.com%2Fwp-content%2Fuploads%2F2016%2F01%2FReverse-Image-Search-Engines-Apps-And-Its-Uses-2016.jpg&f=1'},{ width: 50, height: 50 });
+
+      //Saving thumbnail buffer to a file.
+
+      // fs.open("public/images/image.png", 'w', function(err, fd) {  
+      //   if (err) {
+      //       throw 'could not open file: ' + err;
+      //   }
+
+      //   // write the contents of the buffer, from position 0 to the end, to the file descriptor returned in opening our file
+      //   fs.write(fd, thumbnail, 0, thumbnail.length, null, function(err) {
+      //       if (err) throw 'error writing file: ' + err;
+      //       fs.close(fd, function() {
+      //           console.log('wrote the file successfully');
+      //       });
+      //   });
+
+      res.json({
+        "thumbnail": thumbnail
+      });
+      res.end();
+    }
+  }
+  catch (err) {
+    res.json({
+      "error": err
+    });
+    res.end();
+  }
+}
 
 
 // Verify Token
@@ -92,70 +134,17 @@ function verifyToken(req, res, next) {
     else {
       // Forbidden
       res.sendStatus(403);
+      res.end();
     }
   }
   else {
       // Forbidden
       res.sendStatus(403);
+      res.end();
   }
 }
 
 
 
-router.post('/thumbnail', verifyToken,   function(req, res, next) {
-  
-  // console.log("Cookie", req.cookies.AuthToken);
-
-  jwt.verify(req.get("Authorization").split(" ")[1], 'secretkey', (err, authData) => {
-    if(err) {
-      console.log("Error = ",err);
-      res.sendStatus(403);
-    } else {
-      console.log("Yo");
-      funcimageThumbnail(req,res);
-    }
-  });
-
-});
-
-
-async function funcimageThumbnail(req,res) {
-  try {
-    if(req.body.uri == undefined){
-      res.json({
-        "error": "Please provide uri as the key in the request body."
-      })
-    }
-    else{
-        
-      const thumbnail = await imageThumbnail({ uri: 'https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fbeebom-redkapmedia.netdna-ssl.com%2Fwp-content%2Fuploads%2F2016%2F01%2FReverse-Image-Search-Engines-Apps-And-Its-Uses-2016.jpg&f=1'},{ width: 50, height: 50 });
-      console.log("Thumbnail = ",thumbnail," type = "+typeof(thumbnail));
-
-      //Saving thumbnail buffer to a file.
-
-      // fs.open("public/images/image.png", 'w', function(err, fd) {  
-      //   if (err) {
-      //       throw 'could not open file: ' + err;
-      //   }
-
-      //   // write the contents of the buffer, from position 0 to the end, to the file descriptor returned in opening our file
-      //   fs.write(fd, thumbnail, 0, thumbnail.length, null, function(err) {
-      //       if (err) throw 'error writing file: ' + err;
-      //       fs.close(fd, function() {
-      //           console.log('wrote the file successfully');
-      //       });
-      //   });
-
-      res.json({
-        "thumbnail": thumbnail
-      });
-    }
-  }
-  catch (err) {
-    res.json({
-      "error": err
-    });
-  }
-}
 
 module.exports = router;
